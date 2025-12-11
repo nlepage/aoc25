@@ -5,16 +5,38 @@ devices = lines.map do |l|
   [input, rest.split]
 end.to_h
 
-inputs = ['you']
-r = 0
-until inputs.empty?
-  input = inputs.pop
-  outputs = devices[input]
-  if outputs.first == 'out'
-    r += 1
-    next
+def count(start, target, devices)
+  in_ways = Set[target]
+  nexts = [start]
+
+  until nexts.empty?
+    devices[nexts.shift]&.each do |device|
+      next if in_ways.include? device
+
+      in_ways << device
+      nexts << device
+    end
   end
-  inputs.push(*outputs)
+
+  rdevices = in_ways.to_h { |device| [device, []] }
+  devices
+    .select { |device, _| device == start || in_ways.include?(device) }
+    .each { |device, outputs| outputs.each { |output| rdevices[output]&.push device } }
+
+  ways = {}
+  ways[start] = 1
+  nexts = in_ways.to_a
+
+  until nexts.empty?
+    device = nexts.find { |device| rdevices[device].all? { |input| ways.include? input } }
+    nexts.delete device
+
+    ways[device] = rdevices[device].map { |input| ways[input] }.sum
+  end
+
+  ways[target]
 end
 
-p r
+p count('you', 'out', devices)
+
+p count('svr', 'fft', devices) * count('fft', 'dac', devices) * count('dac', 'out', devices)
